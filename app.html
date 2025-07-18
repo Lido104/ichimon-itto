@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>一問一答プリント作成</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    .controls {
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+    .qa-box {
+      border: 1px solid #ccc;
+      padding: 10px;
+      background: #f9f9f9;
+    }
+    textarea {
+      width: 100%;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    #printArea {
+      margin-top: 20px;
+    }
+    button {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>一問一答プリント作成</h1>
+  <div class="controls">
+    <label>列数:
+      <select id="columns">
+        <option value="3">3列</option>
+        <option value="4">4列</option>
+      </select>
+    </label>
+    <label>行数:
+      <input type="number" id="rows" value="5" min="1" max="25">
+    </label>
+    <button onclick="applySettings()">設定を適用</button>
+    <button onclick="generatePDF()">PDFを生成</button>
+  </div>
+
+  <div id="printArea" class="grid"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    const printArea = document.getElementById('printArea');
+
+    function createInput(index) {
+      const container = document.createElement('div');
+      container.className = 'qa-box';
+
+      const q = document.createElement('textarea');
+      q.placeholder = `問題 ${index + 1}`;
+      const a = document.createElement('textarea');
+      a.placeholder = `解答 ${index + 1}`;
+
+      container.appendChild(q);
+      container.appendChild(a);
+      return container;
+    }
+
+    function applySettings() {
+      const cols = parseInt(document.getElementById('columns').value);
+      const rows = parseInt(document.getElementById('rows').value);
+      printArea.innerHTML = '';
+      printArea.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+      for (let i = 0; i < cols * rows; i++) {
+        printArea.appendChild(createInput(i));
+      }
+    }
+
+    async function generatePDF() {
+      const {{ jsPDF }} = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const scale = 2;
+      const canvas = await html2canvas(printArea, { scale });
+      const imgData = canvas.toDataURL('image/jpeg');
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const imgWidth = pageWidth;
+      const imgHeight = canvas.height * (pageWidth / canvas.width);
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+
+      // 複数ページ対応（必要に応じて）
+      if (imgHeight > pageHeight) {
+        let y = imgHeight;
+        while (y > pageHeight) {
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, -y + pageHeight, imgWidth, imgHeight);
+          y -= pageHeight;
+        }
+      }
+
+      pdf.save('一問一答プリント.pdf');
+    }
+
+    applySettings(); // 初期設定を反映
+  </script>
+</body>
+</html>
